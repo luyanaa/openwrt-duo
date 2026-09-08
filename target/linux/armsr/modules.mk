@@ -13,6 +13,28 @@ endef
 
 $(eval $(call KernelPackage,acpi-mdio))
 
+define KernelPackage/bcmgenet
+  SUBMENU=$(NETWORK_DEVICES_MENU)
+  DEPENDS:=@(TARGET_armsr_armv8) +kmod-mdio-bcm-unimac
+  TITLE:=Broadcom GENET internal MAC (Raspberry Pi 4)
+  KCONFIG:=CONFIG_BCMGENET
+  FILES=$(LINUX_DIR)/drivers/net/ethernet/broadcom/genet/genet.ko
+  AUTOLOAD=$(call AutoLoad,30,genet)
+endef
+
+$(eval $(call KernelPackage,bcmgenet))
+
+define KernelPackage/mdio-bcm-unimac
+  SUBMENU=$(NETWORK_DEVICES_MENU)
+  DEPENDS:=@(TARGET_armsr_armv8) +kmod-of-mdio
+  TITLE:=Broadcom UniMAC MDIO bus controller
+  KCONFIG:=CONFIG_MDIO_BCM_UNIMAC
+  FILES=$(LINUX_DIR)/drivers/net/mdio/mdio-bcm-unimac.ko
+  AUTOLOAD=$(call AutoLoad,30,mdio-bcm-unimac)
+endef
+
+$(eval $(call KernelPackage,mdio-bcm-unimac))
+
 define KernelPackage/fsl-pcs-lynx
   SUBMENU=$(NETWORK_DEVICES_MENU)
   DEPENDS:=@(TARGET_armsr_armv8) +kmod-libphy +kmod-of-mdio +kmod-phylink
@@ -24,17 +46,6 @@ define KernelPackage/fsl-pcs-lynx
 endef
 
 $(eval $(call KernelPackage,fsl-pcs-lynx))
-
-define KernelPackage/pcs-xpcs
-  SUBMENU:=$(NETWORK_DEVICES_MENU)
-  TITLE:=Synopsis DesignWare PCS driver
-  DEPENDS:=@(TARGET_armsr_armv8) +kmod-phylink
-  KCONFIG:=CONFIG_PCS_XPCS
-  FILES:=$(LINUX_DIR)/drivers/net/pcs/pcs_xpcs.ko
-  AUTOLOAD:=$(call AutoLoad,20,pcs_xpcs)
-endef
-
-$(eval $(call KernelPackage,pcs-xpcs))
 
 define KernelPackage/fsl-fec
   SUBMENU:=$(NETWORK_DEVICES_MENU)
@@ -78,7 +89,7 @@ define KernelPackage/fsl-enetc-net
   KCONFIG:= \
     CONFIG_FSL_ENETC \
     CONFIG_FSL_ENETC_VF \
-    CONFIG_FSL_ENETC_QOS
+    CONFIG_FSL_ENETC_QOS=y
   FILES:= \
     $(LINUX_DIR)/drivers/net/ethernet/freescale/enetc/fsl-enetc.ko \
     $(LINUX_DIR)/drivers/net/ethernet/freescale/enetc/fsl-enetc-vf.ko \
@@ -151,17 +162,6 @@ endef
 
 $(eval $(call KernelPackage,marvell-mdio))
 
-define KernelPackage/phy-marvell-10g
-  SUBMENU:=$(NETWORK_DEVICES_MENU)
-  TITLE:=Marvell Alaska 10G PHY driver
-  DEPENDS:=@(TARGET_armsr_armv8) +kmod-libphy
-  KCONFIG:=CONFIG_MARVELL_10G_PHY
-  FILES=$(LINUX_DIR)/drivers/net/phy/marvell10g.ko
-  AUTOLOAD=$(call AutoLoad,35,marvell10g)
-endef
-
-$(eval $(call KernelPackage,phy-marvell-10g))
-
 define KernelPackage/mvneta
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Marvell Armada 370/38x/XP/37xx network driver
@@ -205,28 +205,10 @@ endef
 
 $(eval $(call KernelPackage,imx7-ulp-wdt))
 
-define KernelPackage/stmmac-core
-  SUBMENU=$(NETWORK_DEVICES_MENU)
-  TITLE:=Synopsis Ethernet Controller core (NXP,STMMicro,others)
-  DEPENDS:=@(TARGET_armsr_armv8) +kmod-pcs-xpcs +kmod-ptp \
-    +kmod-of-mdio
-  KCONFIG:=CONFIG_STMMAC_ETH \
-    CONFIG_STMMAC_SELFTESTS=n \
-    CONFIG_STMMAC_PLATFORM \
-    CONFIG_CONFIG_DWMAC_DWC_QOS_ETH=n \
-    CONFIG_DWMAC_GENERIC
-  FILES=$(LINUX_DIR)/drivers/net/ethernet/stmicro/stmmac/stmmac.ko \
-    $(LINUX_DIR)/drivers/net/ethernet/stmicro/stmmac/stmmac-platform.ko \
-    $(LINUX_DIR)/drivers/net/ethernet/stmicro/stmmac/dwmac-generic.ko
-  AUTOLOAD=$(call AutoLoad,40,stmmac stmmac-platform dwmac-generic)
-endef
-
-$(eval $(call KernelPackage,stmmac-core))
-
 define KernelPackage/dwmac-imx
   SUBMENU=$(NETWORK_DEVICES_MENU)
   TITLE:=NXP i.MX8 Ethernet controller
-  DEPENDS:=+kmod-stmmac-core
+  DEPENDS:=+kmod-stmmac-core +kmod-of-mdio
   KCONFIG:=CONFIG_DWMAC_IMX8
   FILES=$(LINUX_DIR)/drivers/net/ethernet/stmicro/stmmac/dwmac-imx.ko
   AUTOLOAD=$(call AutoLoad,45,dwmac-imx)
@@ -237,7 +219,7 @@ $(eval $(call KernelPackage,dwmac-imx))
 define KernelPackage/dwmac-sun8i
   SUBMENU=$(NETWORK_DEVICES_MENU)
   TITLE:=Allwinner H3/A83T/A64 (sun8i) Ethernet
-  DEPENDS:=+kmod-stmmac-core +kmod-mdio-bus-mux
+  DEPENDS:=+kmod-stmmac-core +kmod-of-mdio +kmod-mdio-bus-mux
   KCONFIG:=CONFIG_DWMAC_SUN8I
   FILES=$(LINUX_DIR)/drivers/net/ethernet/stmicro/stmmac/dwmac-sun8i.ko
   AUTOLOAD=$(call AutoLoad,45,dwmac-sun8i)
@@ -248,7 +230,7 @@ $(eval $(call KernelPackage,dwmac-sun8i))
 define KernelPackage/dwmac-rockchip
   SUBMENU=$(NETWORK_DEVICES_MENU)
   TITLE:=Rockchip RK3328/RK3399/RK3568 Ethernet
-  DEPENDS:=+kmod-stmmac-core +kmod-mdio-bus-mux
+  DEPENDS:=+kmod-stmmac-core +kmod-of-mdio +kmod-mdio-bus-mux
   KCONFIG:=CONFIG_DWMAC_ROCKCHIP
   FILES=$(LINUX_DIR)/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.ko
   AUTOLOAD=$(call AutoLoad,45,dwmac-rk)
@@ -256,10 +238,22 @@ endef
 
 $(eval $(call KernelPackage,dwmac-rockchip))
 
+define KernelPackage/mdio-thunder
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Marvell (Cavium) Thunder MDIO controller
+  DEPENDS:=@(TARGET_armsr_armv8) +kmod-of-mdio
+  KCONFIG:=CONFIG_MDIO_THUNDER
+  FILES=$(LINUX_DIR)/drivers/net/mdio/mdio-cavium.ko \
+    $(LINUX_DIR)/drivers/net/mdio/mdio-thunder.ko
+  AUTOLOAD=$(call AutoLoad,30,mdio-cavium mdio-thunder)
+endef
+
+$(eval $(call KernelPackage,mdio-thunder))
+
 define KernelPackage/thunderx-net
   SUBMENU:=$(NETWORK_DEVICES_MENU)
-  TITLE:=Marvell (Cavium) ThunderX/2 network drivers
-  DEPENDS:=@(TARGET_armsr_armv8) +kmod-phylink +kmod-of-mdio
+  TITLE:=Marvell (Cavium) Thunder network drivers
+  DEPENDS:=@(TARGET_armsr_armv8) +kmod-phylink +kmod-mdio-thunder
   KCONFIG:=CONFIG_NET_VENDOR_CAVIUM \
     CONFIG_THUNDER_NIC_PF \
     CONFIG_THUNDER_NIC_VF \
@@ -273,6 +267,25 @@ define KernelPackage/thunderx-net
 endef
 
 $(eval $(call KernelPackage,thunderx-net))
+
+define KernelPackage/octeontx2-net
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Marvell (Cavium) ThunderX2 network drivers
+  DEPENDS:=@(TARGET_armsr_armv8) +kmod-phylink +kmod-of-mdio +kmod-macsec \
+    +kmod-ptp
+  KCONFIG:=CONFIG_OCTEONTX2_MBOX \
+    CONFIG_OCTEONTX2_AF \
+    CONFIG_OCTEONTX2_PF \
+    CONFIG_OCTEONTX2_VF \
+    CONFIG_NDC_DIS_DYNAMIC_CACHING=n
+  FILES=$(LINUX_DIR)/drivers/net/ethernet/marvell/octeontx2/af/rvu_mbox.ko \
+    $(LINUX_DIR)/drivers/net/ethernet/marvell/octeontx2/af/rvu_af.ko \
+    $(LINUX_DIR)/drivers/net/ethernet/marvell/octeontx2/nic/rvu_nicpf.ko \
+    $(LINUX_DIR)/drivers/net/ethernet/marvell/octeontx2/nic/rvu_nicvf.ko \
+    $(LINUX_DIR)/drivers/net/ethernet/marvell/octeontx2/nic/otx2_ptp.ko
+  AUTOLOAD=$(call AutoLoad,40,rvu_af rvu_mbox rvu_nicpf rvu_nicvf otx2_ptp)
+endef
+$(eval $(call KernelPackage,octeontx2-net))
 
 define KernelPackage/wdt-sp805
   SUBMENU:=$(OTHER_MENU)

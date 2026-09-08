@@ -4,6 +4,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
 
 / {
 	model = "Wallys DR531";
@@ -41,7 +42,8 @@
 		compatible = "gpio-leds";
 
 		lan {
-			label = "green:lan";
+			function = LED_FUNCTION_LAN;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&gpio 14 GPIO_ACTIVE_LOW>;
 		};
 
@@ -66,7 +68,8 @@
 		};
 
 		wan {
-			label = "green:wan";
+			function = LED_FUNCTION_WAN;
+			color = <LED_COLOR_ID_GREEN>;
 			gpios = <&gpio 11 GPIO_ACTIVE_LOW>;
 		};
 	};
@@ -116,6 +119,20 @@
 			env: partition@30000 {
 				label = "u-boot-env";
 				reg = <0x030000 0x010000>;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_env_f810: macaddr@f810 {
+						reg = <0xf810 0x6>;
+					};
+
+					macaddr_env_f818: macaddr@f818 {
+						reg = <0xf818 0x6>;
+					};
+				};
 			};
 
 			partition@40000 {
@@ -151,18 +168,4 @@
 	status = "okay";
 
 	mtd-cal-data = <&art 0x1000>;
-};
-
-&env {
-	compatible = "nvmem-cells";
-	#address-cells = <1>;
-	#size-cells = <1>;
-
-	macaddr_env_f810: macaddr@f810 {
-		reg = <0xf810 0x6>;
-	};
-
-	macaddr_env_f818: macaddr@f818 {
-		reg = <0xf818 0x6>;
-	};
 };

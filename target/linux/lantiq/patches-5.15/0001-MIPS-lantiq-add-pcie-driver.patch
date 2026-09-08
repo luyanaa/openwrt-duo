@@ -1470,7 +1470,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +
 --- /dev/null
 +++ b/arch/mips/pci/ifxmips_pcie_ar10.h
-@@ -0,0 +1,290 @@
+@@ -0,0 +1,305 @@
 +/****************************************************************************
 +                              Copyright (c) 2010
 +                            Lantiq Deutschland GmbH
@@ -1722,6 +1722,21 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +    return tbus_number;
 +}
 +
++static struct pci_dev *ifx_pci_get_slot(struct pci_bus *bus, unsigned int devfn)
++{
++	struct pci_dev *dev;
++
++	list_for_each_entry(dev, &bus->devices, bus_list) {
++		if (dev->devfn == devfn)
++			goto out;
++	}
++
++	dev = NULL;
++ out:
++	pci_dev_get(dev);
++	return dev;
++}
++
 +static inline u32
 +ifx_pcie_bus_enum_hack(struct pci_bus *bus, u32 devfn, int where, u32 value, int pcie_port, int read)
 +{
@@ -1729,7 +1744,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +    u32 tvalue = value;
 +
 +    /* Sanity check */
-+    pdev = pci_get_slot(bus, devfn);
++    pdev = ifx_pci_get_slot(bus, devfn);
 +    if (pdev == NULL) {
 +        return tvalue;
 +    }
@@ -3860,7 +3875,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +
 --- /dev/null
 +++ b/arch/mips/pci/ifxmips_pcie_vr9.h
-@@ -0,0 +1,269 @@
+@@ -0,0 +1,284 @@
 +/****************************************************************************
 +                              Copyright (c) 2010
 +                            Lantiq Deutschland GmbH
@@ -3898,6 +3913,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +#define IFX_RCU_AHB_BE_PCIE_M                    0x00000001  /* Configure AHB master port that connects to PCIe RC in big endian */
 +#define IFX_RCU_AHB_BE_PCIE_S                    0x00000010  /* Configure AHB slave port that connects to PCIe RC in little endian */
 +#define IFX_RCU_AHB_BE_XBAR_M                    0x00000002  /* Configure AHB master port that connects to XBAR in big endian */
++#define IFX_RCU_AHB_BE_XBAR_S                    0x00000008  /* Configure AHB slave port that connects to XBAR in big endian */
 +#define CONFIG_IFX_PCIE_PHY_36MHZ_MODE
 +
 +#define IFX_PMU1_MODULE_PCIE_PHY   (0)
@@ -4094,6 +4110,21 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +    return tbus_number;
 +}
 +
++static inline struct pci_dev *ifx_pci_get_slot(struct pci_bus *bus, unsigned int devfn)
++{
++	struct pci_dev *dev;
++
++	list_for_each_entry(dev, &bus->devices, bus_list) {
++		if (dev->devfn == devfn)
++			goto out;
++	}
++
++	dev = NULL;
++ out:
++	pci_dev_get(dev);
++	return dev;
++}
++
 +static inline u32
 +ifx_pcie_bus_enum_hack(struct pci_bus *bus, u32 devfn, int where, u32 value, int pcie_port, int read)
 +{
@@ -4101,7 +4132,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +    u32 tvalue = value;
 +
 +    /* Sanity check */
-+    pdev = pci_get_slot(bus, devfn);
++    pdev = ifx_pci_get_slot(bus, devfn);
 +    if (pdev == NULL) {
 +        return tvalue;
 +    }
@@ -4129,7 +4160,6 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +}
 +
 +#endif /* IFXMIPS_PCIE_VR9_H */
-+
 --- a/arch/mips/pci/pci-legacy.c
 +++ b/arch/mips/pci/pci-legacy.c
 @@ -305,3 +305,30 @@ char *__init pcibios_setup(char *str)
@@ -4165,7 +4195,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +EXPORT_SYMBOL(pcibios_1st_host_bus_nr);
 --- /dev/null
 +++ b/arch/mips/pci/pcie-lantiq.h
-@@ -0,0 +1,1301 @@
+@@ -0,0 +1,1316 @@
 +/******************************************************************************
 +**
 +** FILE NAME    : ifxmips_pcie_reg.h
@@ -5431,6 +5461,21 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +    return tbus_number;
 +}
 +
++static struct pci_dev *ifx_pci_get_slot(struct pci_bus *bus, unsigned int devfn)
++{
++	struct pci_dev *dev;
++
++	list_for_each_entry(dev, &bus->devices, bus_list) {
++		if (dev->devfn == devfn)
++			goto out;
++	}
++
++	dev = NULL;
++ out:
++	pci_dev_get(dev);
++	return dev;
++}
++
 +static inline u32
 +ifx_pcie_bus_enum_hack(struct pci_bus *bus, u32 devfn, int where, u32 value, int pcie_port, int read)
 +{
@@ -5438,7 +5483,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
 +    u32 tvalue = value;
 +
 +    /* Sanity check */
-+    pdev = pci_get_slot(bus, devfn);
++    pdev = ifx_pci_get_slot(bus, devfn);
 +    if (pdev == NULL) {
 +        return tvalue;
 +    }
@@ -5490,7 +5535,7 @@ Signed-off-by: John Crispin <blogic@openwrt.org>
  					 unsigned long type);
 --- a/include/linux/pci_ids.h
 +++ b/include/linux/pci_ids.h
-@@ -1085,6 +1085,12 @@
+@@ -1086,6 +1086,12 @@
  #define PCI_DEVICE_ID_SGI_IOC3		0x0003
  #define PCI_DEVICE_ID_SGI_LITHIUM	0x1002
  

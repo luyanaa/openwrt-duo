@@ -1,3 +1,7 @@
+ifneq ($(KERNEL),6.1)
+DTS_DIR := $(DTS_DIR)/mediatek
+endif
+
 define Device/mediatek_mt7629-rfb
   DEVICE_VENDOR := MediaTek
   DEVICE_MODEL := MT7629 rfb AP
@@ -48,3 +52,12 @@ define Device/netgear_ex6250-v2
 	pad-rootfs | check-size | netgear-encrypted-factory
 endef
 TARGET_DEVICES += netgear_ex6250-v2
+
+define Device/tplink_eap225-v5
+  DEVICE_VENDOR := TP-Link
+  DEVICE_MODEL := EAP225
+  DEVICE_VARIANT := v5
+  DEVICE_DTS := mt7629-tplink_eap225-v5
+  DEVICE_DTS_DIR := ../dts
+endef
+TARGET_DEVICES += tplink_eap225-v5

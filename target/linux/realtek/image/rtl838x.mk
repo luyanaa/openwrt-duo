@@ -41,7 +41,7 @@ define Device/d-link_dgs-1210-10p
   $(Device/d-link_dgs-1210)
   SOC := rtl8382
   DEVICE_MODEL := DGS-1210-10P
-  DEVICE_PACKAGES += lua-rs232
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += d-link_dgs-1210-10p
 
@@ -82,6 +82,7 @@ define Device/engenius_ews2910p
   IMAGE_SIZE := 8192k
   DEVICE_VENDOR := EnGenius
   DEVICE_MODEL := EWS2910P
+  DEVICE_PACKAGES += realtek-poe
   UIMAGE_MAGIC := 0x03802910
   KERNEL_INITRAMFS := \
 	kernel-bin | \
@@ -99,13 +100,24 @@ define Device/hpe_1920-8g
 endef
 TARGET_DEVICES += hpe_1920-8g
 
-define Device/hpe_1920-8g-poe
+define Device/hpe_1920-8g-poe-65w
   $(Device/hpe_1920)
   SOC := rtl8380
-  DEVICE_MODEL := 1920-8G-PoE+ (JG922A)
-  H3C_DEVICE_ID := 0x00010025
+  DEVICE_MODEL := 1920-8G-PoE+ 65W (JG921A)
+  DEVICE_PACKAGES += realtek-poe
+  H3C_DEVICE_ID := 0x00010024
 endef
-TARGET_DEVICES += hpe_1920-8g-poe
+TARGET_DEVICES += hpe_1920-8g-poe-65w
+
+define Device/hpe_1920-8g-poe-180w
+  $(Device/hpe_1920)
+  SOC := rtl8380
+  DEVICE_MODEL := 1920-8G-PoE+ 180W (JG922A)
+  DEVICE_PACKAGES += realtek-poe
+  H3C_DEVICE_ID := 0x00010025
+  SUPPORTED_DEVICES += hpe_1920-8g-poe
+endef
+TARGET_DEVICES += hpe_1920-8g-poe-180w
 
 define Device/hpe_1920-16g
   $(Device/hpe_1920)
@@ -156,6 +168,25 @@ define Device/netgear_nge
   SOC := rtl8380
   IMAGE_SIZE := 14848k
   UIMAGE_MAGIC := 0x4e474520
+  UIMAGE_NAME := 9.9.9.9
+  DEVICE_VENDOR := NETGEAR
+endef
+
+# "NGG" refers to the uImage magic
+define Device/netgear_ngg
+  KERNEL := \
+	kernel-bin | \
+	append-dtb | \
+	lzma | \
+	uImage lzma
+  KERNEL_INITRAMFS := \
+	kernel-bin | \
+	append-dtb | \
+	lzma | \
+	uImage lzma
+  SOC := rtl8380
+  IMAGE_SIZE := 14848k
+  UIMAGE_MAGIC := 0x4e474720
   DEVICE_VENDOR := NETGEAR
 endef
 
@@ -170,8 +201,17 @@ define Device/netgear_gs110tpp-v1
   $(Device/netgear_nge)
   DEVICE_MODEL := GS110TPP
   DEVICE_VARIANT := v1
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += netgear_gs110tpp-v1
+
+define Device/netgear_gs110tup-v1
+  $(Device/netgear_ngg)
+  DEVICE_MODEL := GS110TUP
+  DEVICE_VARIANT := v1
+  DEVICE_PACKAGES += realtek-poe
+endef
+TARGET_DEVICES += netgear_gs110tup-v1
 
 define Device/netgear_gs308t-v1
   $(Device/netgear_nge)
@@ -186,7 +226,7 @@ define Device/netgear_gs310tp-v1
   DEVICE_MODEL := GS310TP
   DEVICE_VARIANT := v1
   UIMAGE_MAGIC := 0x4e474335
-  DEVICE_PACKAGES += lua-rs232
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += netgear_gs310tp-v1
 
@@ -242,11 +282,22 @@ define Device/tplink_sg2210p-v3
 endef
 TARGET_DEVICES += tplink_sg2210p-v3
 
+define Device/tplink_t1600g-28ts-v3
+  SOC := rtl8382
+  KERNEL_SIZE := 6m
+  IMAGE_SIZE := 26m
+  DEVICE_VENDOR := TP-Link
+  DEVICE_MODEL := T1600G-28TS
+  DEVICE_VARIANT := v3
+endef
+TARGET_DEVICES += tplink_t1600g-28ts-v3
+
 define Device/zyxel_gs1900-10hp
   $(Device/zyxel_gs1900)
   SOC := rtl8380
   DEVICE_MODEL := GS1900-10HP
   ZYXEL_VERS := AAZI
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += zyxel_gs1900-10hp
 
@@ -262,6 +313,10 @@ define Device/zyxel_gs1900-8
   $(Device/zyxel_gs1900)
   SOC := rtl8380
   DEVICE_MODEL := GS1900-8
+  DEVICE_VARIANT := v1
+  DEVICE_ALT0_VENDOR := ZyXEL
+  DEVICE_ALT0_MODEL := GS1900-8
+  DEVICE_ALT0_VARIANT := v2
   ZYXEL_VERS := AAHH
 endef
 TARGET_DEVICES += zyxel_gs1900-8
@@ -272,7 +327,7 @@ define Device/zyxel_gs1900-8hp-v1
   DEVICE_MODEL := GS1900-8HP
   DEVICE_VARIANT := v1
   ZYXEL_VERS := AAHI
-  DEVICE_PACKAGES += lua-rs232
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += zyxel_gs1900-8hp-v1
 
@@ -282,7 +337,7 @@ define Device/zyxel_gs1900-8hp-v2
   DEVICE_MODEL := GS1900-8HP
   DEVICE_VARIANT := v2
   ZYXEL_VERS := AAHI
-  DEVICE_PACKAGES += lua-rs232
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += zyxel_gs1900-8hp-v2
 
@@ -303,12 +358,22 @@ define Device/zyxel_gs1900-24e
 endef
 TARGET_DEVICES += zyxel_gs1900-24e
 
+define Device/zyxel_gs1900-24ep
+  $(Device/zyxel_gs1900)
+  SOC := rtl8382
+  DEVICE_MODEL := GS1900-24EP
+  ZYXEL_VERS := ABTO
+  DEVICE_PACKAGES += realtek-poe
+endef
+TARGET_DEVICES += zyxel_gs1900-24ep
+
 define Device/zyxel_gs1900-24hp-v1
   $(Device/zyxel_gs1900)
   SOC := rtl8382
   DEVICE_MODEL := GS1900-24HP
   DEVICE_VARIANT := v1
   ZYXEL_VERS := AAHM
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += zyxel_gs1900-24hp-v1
 
@@ -318,5 +383,6 @@ define Device/zyxel_gs1900-24hp-v2
   DEVICE_MODEL := GS1900-24HP
   DEVICE_VARIANT := v2
   ZYXEL_VERS := ABTP
+  DEVICE_PACKAGES += realtek-poe
 endef
 TARGET_DEVICES += zyxel_gs1900-24hp-v2

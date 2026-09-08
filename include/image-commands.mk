@@ -46,7 +46,7 @@ endef
 
 ifdef IB
 define Build/append-image-stage
-	dd if=$(STAGING_DIR_IMAGE)/$(BOARD)$(if $(SUBTARGET),-$(SUBTARGET))-$(DEVICE_NAME)-$(1) >> $@
+	dd if=$(STAGING_DIR_IMAGE)/$(BOARD)-$(SUBTARGET)-$(DEVICE_NAME)-$(1) >> $@
 endef
 else
 define Build/append-image-stage
@@ -54,7 +54,7 @@ define Build/append-image-stage
 	fwtool -s /dev/null -t "$@.stripmeta" || :
 	fwtool -i /dev/null -t "$@.stripmeta" || :
 	mkdir -p "$(STAGING_DIR_IMAGE)"
-	dd if="$@.stripmeta" of="$(STAGING_DIR_IMAGE)/$(BOARD)$(if $(SUBTARGET),-$(SUBTARGET))-$(DEVICE_NAME)-$(1)"
+	dd if="$@.stripmeta" of="$(STAGING_DIR_IMAGE)/$(BOARD)-$(SUBTARGET)-$(DEVICE_NAME)-$(1)"
 	dd if="$@.stripmeta" >> "$@"
 	rm "$@.stripmeta"
 endef
@@ -133,12 +133,30 @@ define Build/append-md5sum-ascii-salted
 	rm $@.salted
 endef
 
+UBI_NAND_SIZE_LIMIT = $(IMAGE_SIZE) - ($(NAND_SIZE)*20/1024 + 4*$(BLOCKSIZE))
+
 define Build/append-ubi
 	sh $(TOPDIR)/scripts/ubinize-image.sh \
 		$(if $(UBOOTENV_IN_UBI),--uboot-env) \
 		$(if $(KERNEL_IN_UBI),--kernel $(IMAGE_KERNEL)) \
 		$(foreach part,$(UBINIZE_PARTS),--part $(part)) \
 		--rootfs $(IMAGE_ROOTFS) \
+		$@.tmp \
+		-p $(BLOCKSIZE:%k=%KiB) -m $(PAGESIZE) \
+		$(if $(SUBPAGESIZE),-s $(SUBPAGESIZE)) \
+		$(if $(VID_HDR_OFFSET),-O $(VID_HDR_OFFSET)) \
+		$(UBINIZE_OPTS)
+	cat $@.tmp >> $@
+	rm $@.tmp
+	$(if $(and $(IMAGE_SIZE),$(NAND_SIZE)),\
+		$(call Build/check-size,$(UBI_NAND_SIZE_LIMIT)))
+endef
+
+define Build/ubinize-image
+	sh $(TOPDIR)/scripts/ubinize-image.sh \
+		$(if $(UBOOTENV_IN_UBI),--uboot-env) \
+		$(foreach part,$(UBINIZE_PARTS),--part $(part)) \
+		--part $(word 1,$(1))="$(BIN_DIR)/$(DEVICE_IMG_PREFIX)-$(word 2,$(1))" \
 		$@.tmp \
 		-p $(BLOCKSIZE:%k=%KiB) -m $(PAGESIZE) \
 		$(if $(SUBPAGESIZE),-s $(SUBPAGESIZE)) \
@@ -215,7 +233,7 @@ endef
 
 define Build/check-size
 	@imagesize="$$(stat -c%s $@)"; \
-	limitsize="$$(($(subst k,* 1024,$(subst m, * 1024k,$(if $(1),$(1),$(IMAGE_SIZE))))))"; \
+	limitsize="$$(($(call exp_units,$(if $(1),$(1),$(IMAGE_SIZE)))))"; \
 	[ $$limitsize -ge $$imagesize ] || { \
 		$(call ERROR_MESSAGE,    WARNING: Image file $@ is too big: $$imagesize > $$limitsize); \
 		rm -f $@; \
@@ -224,6 +242,48 @@ endef
 
 define Build/copy-file
 	cat "$(1)" > "$@"
+endef
+
+# Create a header for a D-Link AI series recovery image and add it at the beginning of the image
+# Currently supported: AQUILA M30, EAGLE M32 and R32
+# Arguments:
+# 1: Start string of the header
+# 2: Firmware version
+# 3: Block start address
+# 4: Block length
+# 5: Device FMID
+define Build/dlink-ai-recovery-header
+	$(eval header_start=$(word 1,$(1)))
+	$(eval firmware_version=$(word 2,$(1)))
+	$(eval block_start=$(word 3,$(1)))
+	$(eval block_length=$(word 4,$(1)))
+	$(eval device_fmid=$(word 5,$(1)))
+# create $@.header without the checksum
+	echo -en "$(header_start)\x00\x00" > "$@.header"
+# Calculate checksum over data area ($@) and append it to the header.
+# The checksum is the 2byte-sum over the whole data area.
+# Every overflow during the checksum calculation must increment the current checksum value by 1.
+	od -v -w2 -tu2 -An --endian little "$@" | awk '{ s+=$$1; } END { s%=65535; printf "%c%c",s%256,s/256; }' >> "$@.header"
+	echo -en "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00" >> "$@.header"
+	echo -en "$(firmware_version)" >> "$@.header"
+# Only one block supported: Erase start/length is identical to data start/length
+	echo -en "$(block_start)$(block_length)$(block_start)$(block_length)" >> "$@.header"
+# Only zeros
+	echo -en "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" >> "$@.header"
+# Last 16 bytes, but without checksum
+	echo -en "\x42\x48\x02\x00\x00\x00\x08\x00\x00\x00\x00\x00" >> "$@.header"
+	echo -en "$(device_fmid)" >> "$@.header"
+# Calculate and append checksum: The checksum must be set so that the 2byte-sum of the whole header is 0.
+# Every overflow during the checksum calculation must increment the current checksum value by 1.
+	od -v -w2 -tu2 -An --endian little "$@.header" | awk '{s+=65535-$$1;}END{s%=65535;printf "%c%c",s%256,s/256;}' >> "$@.header"
+	cat "$@.header" "$@" > "$@.new"
+	mv "$@.new" "$@"
+	rm "$@.header"
+endef
+
+define Build/dlink-sge-image
+	$(STAGING_DIR_HOST)/bin/dlink-sge-image $(1) $@ $@.enc
+	mv $@.enc $@
 endef
 
 define Build/edimax-header
@@ -384,10 +444,17 @@ define Build/kernel-bin
 endef
 
 define Build/linksys-image
-	$(TOPDIR)/scripts/linksys-image.sh \
+	let \
+		size="$$(stat -c%s $@)" \
+		pad="$(call exp_units,$(PAGESIZE))" \
+		offset="256" \
+		pad="(pad - ((size + offset) % pad)) % pad"; \
+		dd if=/dev/zero bs=$$pad count=1 | tr '\000' '\377' >> $@
+	printf ".LINKSYS.01000409%-15s%08X%-8s%-16s" \
 		"$(call param_get_default,type,$(1),$(DEVICE_NAME))" \
-		$@ $@.new
-		mv $@.new $@
+		"$$(cksum $@ | cut -d ' ' -f1)" \
+		"0" "K0000000F0246434" >> $@
+	dd if=/dev/zero bs=192 count=1 >> $@
 endef
 
 define Build/lzma
@@ -461,8 +528,8 @@ endef
 define Build/pad-offset
 	let \
 		size="$$(stat -c%s $@)" \
-		pad="$(subst k,* 1024,$(word 1, $(1)))" \
-		offset="$(subst k,* 1024,$(word 2, $(1)))" \
+		pad="$(call exp_units,$(word 1, $(1)))" \
+		offset="$(call exp_units,$(word 2, $(1)))" \
 		pad="(pad - ((size + offset) % pad)) % pad" \
 		newsize='size + pad'; \
 		dd if=$@ of=$@.new bs=$$newsize count=1 conv=sync
@@ -624,7 +691,7 @@ endef
 
 define Build/zyxel-ras-image
 	let \
-		newsize="$(subst k,* 1024,$(RAS_ROOTFS_SIZE))"; \
+		newsize="$(call exp_units,$(RAS_ROOTFS_SIZE))"; \
 		$(STAGING_DIR_HOST)/bin/mkrasimage \
 			-b $(RAS_BOARD) \
 			-v $(RAS_VERSION) \

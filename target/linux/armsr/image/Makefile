@@ -15,16 +15,12 @@ ifneq ($(CONFIG_GRUB_CONSOLE),)
   GRUB_TERMINALS += console
 endif
 
-GRUB_SERIAL:=$(call qstrip,$(CONFIG_GRUB_SERIAL))
+GRUB_SERIAL:=$(call qstrip,$(CONFIG_TARGET_SERIAL))
 
-ifneq ($(GRUB_SERIAL),)
-  GRUB_SERIAL_CONFIG := serial --unit=0 --speed=$(CONFIG_GRUB_BAUDRATE) --word=8 --parity=no --stop=1 --rtscts=$(if $(CONFIG_GRUB_FLOWCONTROL),on,off)
-  GRUB_TERMINALS += serial
-endif
+GRUB_SERIAL_CONFIG := serial --unit=0 --speed=$(CONFIG_GRUB_BAUDRATE) --word=8 --parity=no --stop=1 --rtscts=$(if $(CONFIG_GRUB_FLOWCONTROL),on,off)
+GRUB_TERMINALS += serial
 
-ifneq ($(GRUB_TERMINALS),)
-  GRUB_TERMINAL_CONFIG := terminal_input $(GRUB_TERMINALS); terminal_output $(GRUB_TERMINALS)
-endif
+GRUB_TERMINAL_CONFIG := terminal_input $(GRUB_TERMINALS); terminal_output $(GRUB_TERMINALS)
 
 ROOTPART:=$(call qstrip,$(CONFIG_TARGET_ROOTFS_PARTNAME))
 ROOTPART:=$(if $(ROOTPART),$(ROOTPART),PARTUUID=$(IMG_PART_SIGNATURE)-02)
@@ -111,7 +107,8 @@ define Device/generic
 	kmod-mvneta kmod-mvpp2 kmod-fsl-dpaa1-net kmod-fsl-dpaa2-net \
 	kmod-fsl-enetc-net kmod-dwmac-imx kmod-fsl-fec kmod-thunderx-net \
 	kmod-dwmac-rockchip kmod-dwmac-sun8i kmod-phy-aquantia kmod-phy-broadcom \
-	kmod-phy-marvell kmod-phy-marvell-10g kmod-sfp kmod-atlantic
+	kmod-phy-marvell kmod-phy-marvell-10g kmod-sfp kmod-atlantic \
+	kmod-bcmgenet kmod-octeontx2-net
 endef
 TARGET_DEVICES += generic
 

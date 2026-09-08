@@ -93,8 +93,7 @@ define KernelPackage/vxlan
 	+IPV6:kmod-udptunnel6
   KCONFIG:=CONFIG_VXLAN
   FILES:= \
-	$(LINUX_DIR)/drivers/net/vxlan.ko@lt5.18 \
-	$(LINUX_DIR)/drivers/net/vxlan/vxlan.ko@ge5.18
+	$(LINUX_DIR)/drivers/net/vxlan/vxlan.ko
   AUTOLOAD:=$(call AutoLoad,13,vxlan)
 endef
 
@@ -908,10 +907,26 @@ endef
 $(eval $(call KernelPackage,sched-ipset))
 
 
+define KernelPackage/sched-mqprio-common
+  SUBMENU:=$(NETWORK_SUPPORT_MENU)
+  TITLE:=mqprio queue common dependencies support
+  DEPENDS:=@LINUX_6_6
+  HIDDEN:=1
+  KCONFIG:=CONFIG_NET_SCH_MQPRIO_LIB
+  FILES:=$(LINUX_DIR)/net/sched/sch_mqprio_lib.ko
+endef
+
+define KernelPackage/sched-mqprio-common/description
+ Common library for manipulating mqprio queue configurations
+endef
+
+$(eval $(call KernelPackage,sched-mqprio-common))
+
+
 define KernelPackage/sched-mqprio
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   TITLE:=Multi-queue priority scheduler (MQPRIO)
-  DEPENDS:=+kmod-sched-core
+  DEPENDS:=+kmod-sched-core +LINUX_6_6:kmod-sched-mqprio-common
   KCONFIG:=CONFIG_NET_SCH_MQPRIO
   FILES:=$(LINUX_DIR)/net/sched/sch_mqprio.ko
   AUTOLOAD:=$(call AutoProbe, sch_mqprio)
@@ -972,6 +987,18 @@ endef
 $(eval $(call KernelPackage,sched-red))
 
 
+define KernelPackage/sched-skbprio
+  SUBMENU:=$(NETWORK_SUPPORT_MENU)
+  TITLE:=SKB priority queue scheduler (SKBPRIO)
+  DEPENDS:=+kmod-sched-core
+  KCONFIG:= CONFIG_NET_SCH_SKBPRIO
+  FILES:= $(LINUX_DIR)/net/sched/sch_skbprio.ko
+  AUTOLOAD:=$(call AutoProbe,sch_skbprio)
+endef
+
+$(eval $(call KernelPackage,sched-skbprio))
+
+
 define KernelPackage/bpf-test
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   TITLE:=Test Berkeley Packet Filter functionality
@@ -982,7 +1009,7 @@ endef
 $(eval $(call KernelPackage,bpf-test))
 
 
-SCHED_MODULES_EXTRA = sch_codel sch_dsmark sch_gred sch_multiq sch_sfq sch_teql sch_fq act_pedit act_simple act_csum em_cmp em_nbyte em_meta em_text
+SCHED_MODULES_EXTRA = sch_codel sch_gred sch_multiq sch_sfq sch_teql sch_fq act_pedit act_simple act_skbmod act_csum em_cmp em_nbyte em_meta em_text
 SCHED_FILES_EXTRA = $(foreach mod,$(SCHED_MODULES_EXTRA),$(LINUX_DIR)/net/sched/$(mod).ko)
 
 define KernelPackage/sched
@@ -991,7 +1018,6 @@ define KernelPackage/sched
   DEPENDS:=+kmod-sched-core +kmod-lib-crc32c +kmod-lib-textsearch
   KCONFIG:= \
 	CONFIG_NET_SCH_CODEL \
-	CONFIG_NET_SCH_DSMARK \
 	CONFIG_NET_SCH_GRED \
 	CONFIG_NET_SCH_MULTIQ \
 	CONFIG_NET_SCH_SFQ \
@@ -999,6 +1025,7 @@ define KernelPackage/sched
 	CONFIG_NET_SCH_FQ \
 	CONFIG_NET_ACT_PEDIT \
 	CONFIG_NET_ACT_SIMP \
+	CONFIG_NET_ACT_SKBMOD \
 	CONFIG_NET_ACT_CSUM \
 	CONFIG_NET_EMATCH_CMP \
 	CONFIG_NET_EMATCH_NBYTE \
@@ -1312,17 +1339,13 @@ $(eval $(call KernelPackage,mpls))
 define KernelPackage/9pnet
   SUBMENU:=$(NETWORK_SUPPORT_MENU)
   TITLE:=Plan 9 Resource Sharing Support (9P2000)
-  DEPENDS:=@VIRTIO_SUPPORT
   KCONFIG:= \
 	CONFIG_NET_9P \
 	CONFIG_NET_9P_DEBUG=n \
-	CONFIG_NET_9P_XEN=n \
-	CONFIG_NET_9P_VIRTIO \
 	CONFIG_NET_9P_FD=n@ge5.17
   FILES:= \
-	$(LINUX_DIR)/net/9p/9pnet.ko \
-	$(LINUX_DIR)/net/9p/9pnet_virtio.ko
-  AUTOLOAD:=$(call AutoLoad,29,9pnet 9pnet_virtio)
+	$(LINUX_DIR)/net/9p/9pnet.ko
+  AUTOLOAD:=$(call AutoLoad,29,9pnet)
 endef
 
 define KernelPackage/9pnet/description
@@ -1331,6 +1354,25 @@ define KernelPackage/9pnet/description
 endef
 
 $(eval $(call KernelPackage,9pnet))
+
+define KernelPackage/9pvirtio
+  SUBMENU:=$(NETWORK_SUPPORT_MENU)
+  TITLE:=Plan 9 Virtio Support
+  DEPENDS:=+kmod-9pnet @VIRTIO_SUPPORT
+  KCONFIG:= \
+	CONFIG_NET_9P_XEN=n \
+	CONFIG_NET_9P_VIRTIO
+  FILES:= \
+	$(LINUX_DIR)/net/9p/9pnet_virtio.ko
+  AUTOLOAD:=$(call AutoLoad,29,9pnet_virtio)
+endef
+
+define KernelPackage/9pvirtio/description
+  Kernel support support for
+  Plan 9 resource sharing for virtio.
+endef
+
+$(eval $(call KernelPackage,9pvirtio))
 
 
 define KernelPackage/nlmon

@@ -33,6 +33,11 @@ platform_do_upgrade() {
 			fw_setenv --lock / bootImage 0 || exit 1
 		fi
 		;;
+	iptime,ax2004m)
+		if [ "$(fw_printenv -n boot_from 2>/dev/null)" != "firmware1" ]; then
+			fw_setenv boot_from firmware1 || exit 1
+		fi
+		;;
 	mikrotik,ltap-2hnd|\
 	mikrotik,routerboard-750gr3|\
 	mikrotik,routerboard-760igs|\
@@ -63,6 +68,7 @@ platform_do_upgrade() {
 	beeline,smartbox-turbo|\
 	beeline,smartbox-turbo-plus|\
 	belkin,rt1800|\
+	dlink,covr-x1860-a1|\
 	dlink,dap-x1860-a1|\
 	dlink,dir-1960-a1|\
 	dlink,dir-2640-a1|\
@@ -103,6 +109,7 @@ platform_do_upgrade() {
 	netgear,wax202|\
 	netis,wf2881|\
 	raisecom,msg1500-x-00|\
+	rostelecom,rt-fe-1a|\
 	rostelecom,rt-sf-1|\
 	sercomm,na502|\
 	sercomm,na502s|\
@@ -117,6 +124,7 @@ platform_do_upgrade() {
 	xiaomi,mi-router-cr6608|\
 	xiaomi,mi-router-cr6609|\
 	xiaomi,redmi-router-ac2100|\
+	z-router,zr-2660|\
 	zyxel,nwa50ax|\
 	zyxel,nwa55axe)
 		nand_do_upgrade "$1"
@@ -125,11 +133,17 @@ platform_do_upgrade() {
 	iodata,wn-ax2033gr|\
 	iodata,wn-dx1167r|\
 	iodata,wn-dx2033gr)
-		iodata_mstc_upgrade_prepare "0xfe75"
+		iodata_mstc_set_flag "debugflag" "factory" "0xfe75" "0,1" "1"
+		iodata_mstc_set_flag "bootnum" "persist" "0x4" "1,2" "1"
+		nand_do_upgrade "$1"
+		;;
+	iodata,wn-deax1800gr)
+		iodata_mstc_set_flag "bootnum" "working" "0x4" "0,1" "0"
 		nand_do_upgrade "$1"
 		;;
 	iodata,wn-dx1200gr)
-		iodata_mstc_upgrade_prepare "0x1fe75"
+		iodata_mstc_set_flag "debugflag" "factory" "0x1fe75" "0,1" "1"
+		iodata_mstc_set_flag "bootnum" "persist" "0x4" "1,2" "1"
 		nand_do_upgrade "$1"
 		;;
 	tplink,er605-v2)
@@ -143,6 +157,7 @@ platform_do_upgrade() {
 		platform_upgrade_ubnt_erx "$1"
 		;;
 	zyxel,lte3301-plus|\
+	zyxel,lte5398-m904|\
 	zyxel,nr7101)
 		fw_setenv CheckBypass 0
 		fw_setenv Image1Stable 0

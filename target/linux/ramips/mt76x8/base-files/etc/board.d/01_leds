@@ -76,7 +76,8 @@ tplink,tl-wr850n-v2)
 	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x01"
 	;;
 tplink,archer-c50-v3|\
-tplink,archer-c50-v4)
+tplink,archer-c50-v4|\
+tplink,archer-c50-v6)
 	ucidef_set_led_switch "lan" "lan" "green:lan" "switch0" "0x1e"
 	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x01"
 	ucidef_set_led_wlan "wlan2g" "wlan2g" "green:wlan2g" "phy0tpt"
@@ -89,6 +90,12 @@ tplink,re220-v2|\
 tplink,tl-mr3020-v3|\
 tplink,tl-wa801nd-v5)
 	ucidef_set_led_netdev "lan" "lan" "green:lan" "eth0"
+	;;
+tplink,re205-v3)
+	ucidef_set_led_netdev "lan" "lan" "blue:signal" "eth0"
+	;;
+tplink,re365-v1)
+	ucidef_set_led_netdev "lan" "lan" "blue:lan" "eth0"
 	;;
 tplink,tl-mr3420-v5|\
 tplink,tl-wr840n-v4|\
@@ -121,6 +128,9 @@ tplink,tl-wr841n-v14)
 tplink,tl-wr902ac-v3)
 	ucidef_set_led_wlan "wlan2g" "wlan2g" "green:wlan" "phy0tpt"
 	ucidef_set_led_switch "lan" "lan" "green:lan" "switch0" "0x10"
+	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x10"
+	;;
+tplink,tl-wr902ac-v4)
 	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x10"
 	;;
 unielec,u7628-01-16m)

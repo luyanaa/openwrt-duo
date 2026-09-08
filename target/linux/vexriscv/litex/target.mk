@@ -1,0 +1,2 @@
+BOARDNAME:=litex
+

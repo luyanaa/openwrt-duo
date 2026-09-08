@@ -74,42 +74,36 @@
 		compatible = "gpio-leds";
 
 		led-0 {
-			label = "green:speed";
 			gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_INDICATOR;
 		};
 
 		led-1 {
-			label = "green:poe";
 			gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_INDICATOR;
 		};
 
 		led_sys: led-2 {
-			label = "green:sys";
 			gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_STATUS;
 		};
 
 		led-3 {
-			label = "green:fan";
 			gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_STATUS;
 		};
 
 		led-4 {
-			label = "amber:fan";
 			gpios = <&gpio0 16 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_AMBER>;
 			function = "fault-fan";
 		};
 
 		led-5 {
-			label = "green:poe-max";
 			gpios = <&gpio0 18 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = "alarm-poe";
@@ -262,15 +256,18 @@
 				reg = <0x1b00000 0x400000>;
 			};
 			partition@1f00000 {
-				compatible = "nvmem-cells";
 				label = "para";
 				reg = <0x1f00000 0x100000>;
-				#address-cells = <1>;
-				#size-cells = <1>;
 				read-only;
 
-				factory_macaddr: macaddr@fdff4 {
-					reg = <0xfdff4 0x6>;
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					factory_macaddr: macaddr@fdff4 {
+						reg = <0xfdff4 0x6>;
+					};
 				};
 			};
 		};

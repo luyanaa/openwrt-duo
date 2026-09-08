@@ -10,10 +10,10 @@ LEDE_GIT = $(PROJECT_GIT)
 
 ifdef PKG_SOURCE_VERSION
   ifndef PKG_VERSION
-    PKG_VERSION := $(if $(PKG_SOURCE_DATE),$(PKG_SOURCE_DATE)-)$(call version_abbrev,$(PKG_SOURCE_VERSION))
+    PKG_VERSION := $(if $(PKG_SOURCE_DATE),$(subst -,.,$(PKG_SOURCE_DATE)),0)~$(call version_abbrev,$(PKG_SOURCE_VERSION))
   endif
   PKG_SOURCE_SUBDIR ?= $(PKG_NAME)-$(PKG_VERSION)
-  PKG_SOURCE ?= $(PKG_SOURCE_SUBDIR).tar.xz
+  PKG_SOURCE ?= $(PKG_SOURCE_SUBDIR).tar.zst
 endif
 
 DOWNLOAD_RDEP=$(STAMP_PREPARED) $(HOST_STAMP_PREPARED)
@@ -209,11 +209,17 @@ define DownloadMethod/github_archive
 			--subdir="$(SUBDIR)" \
 			--source="$(FILE)" \
 			--hash="$(MIRROR_HASH)" \
+			--submodules $(SUBMODULES) \
 		|| ( $(call DownloadMethod/rawgit) ); \
 	)
 endef
 
 # Only intends to be called as a submethod from other DownloadMethod
+#
+# We first clone, checkout and then we generate a tar using the
+# git archive command to apply any rules of .gitattributes
+# To keep consistency with github generated tar archive, we default
+# the short hash to 8 (default is 7). (for git log related usage)
 define DownloadMethod/rawgit
 	echo "Checking out files from the git repository..."; \
 	mkdir -p $(TMP_DIR)/dl && \
@@ -221,11 +227,17 @@ define DownloadMethod/rawgit
 	rm -rf $(SUBDIR) && \
 	[ \! -d $(SUBDIR) ] && \
 	git clone $(OPTS) $(URL) $(SUBDIR) && \
-	(cd $(SUBDIR) && git checkout $(VERSION) && \
-	git submodule update --init --recursive) && \
-	echo "Packing checkout..." && \
+	(cd $(SUBDIR) && git checkout $(VERSION)) && \
 	export TAR_TIMESTAMP=`cd $(SUBDIR) && git log -1 --format='@%ct'` && \
-	rm -rf $(SUBDIR)/.git && \
+	echo "Generating formal git archive (apply .gitattributes rules)" && \
+	(cd $(SUBDIR) && git config core.abbrev 8 && \
+	git archive --format=tar HEAD --output=../$(SUBDIR).tar.git) && \
+	$(if $(filter skip,$(SUBMODULES)),true,$(TAR) --ignore-failed-read -C $(SUBDIR) -f $(SUBDIR).tar.git -r .git .gitmodules 2>/dev/null) && \
+	rm -rf $(SUBDIR) && mkdir $(SUBDIR) && \
+	$(TAR) -C $(SUBDIR) -xf $(SUBDIR).tar.git && \
+	(cd $(SUBDIR) && $(if $(filter skip,$(SUBMODULES)),true,git submodule update --init --recursive -- $(SUBMODULES) && \
+	rm -rf .git .gitmodules)) && \
+	echo "Packing checkout..." && \
 	$(call dl_tar_pack,$(TMP_DIR)/dl/$(FILE),$(SUBDIR)) && \
 	mv $(TMP_DIR)/dl/$(FILE) $(DL_DIR)/ && \
 	rm -rf $(SUBDIR);
@@ -301,6 +313,7 @@ define Download/Defaults
   MIRROR_MD5SUM:=x
   VERSION:=
   OPTS:=
+  SUBMODULES:=
 endef
 
 define Download/default
@@ -309,6 +322,7 @@ define Download/default
   URL_FILE:=$(PKG_SOURCE_URL_FILE)
   SUBDIR:=$(PKG_SOURCE_SUBDIR)
   PROTO:=$(PKG_SOURCE_PROTO)
+  SUBMODULES:=$(PKG_SOURCE_SUBMODULES)
   $(if $(PKG_SOURCE_MIRROR),MIRROR:=$(filter 1,$(PKG_MIRROR)))
   $(if $(PKG_MIRROR_MD5SUM),MIRROR_MD5SUM:=$(PKG_MIRROR_MD5SUM))
   $(if $(PKG_MIRROR_HASH),MIRROR_HASH:=$(PKG_MIRROR_HASH))

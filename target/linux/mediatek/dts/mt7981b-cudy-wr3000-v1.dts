@@ -2,6 +2,8 @@
 
 /dts-v1/;
 
+#include <dt-bindings/leds/common.h>
+
 #include "mt7981.dtsi"
 
 / {
@@ -10,7 +12,7 @@
 
 	aliases {
 		ethernet0 = &gmac0;
-		label-mac-device = &lan1;
+		label-mac-device = &gmac0;
 		led-boot = &led_status;
 		led-failsafe = &led_status;
 		led-running = &led_status;
@@ -34,7 +36,7 @@
 		wps {
 			label = "wps";
 			linux,code = <KEY_WPS_BUTTON>;
-			gpios = <&pio 0 GPIO_ACTIVE_HIGH>;
+			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
 		};
 	};
 
@@ -42,7 +44,8 @@
 		compatible = "gpio-leds";
 
 		led_status: led@0 {
-			label = "blue:status";
+			function = LED_FUNCTION_STATUS;
+			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&pio 10 GPIO_ACTIVE_LOW>;
 		};
 
@@ -52,12 +55,14 @@
 		};
 
 		led@2 {
-			label = "blue:wan";
+			function = LED_FUNCTION_WAN;
+			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&pio 5 GPIO_ACTIVE_LOW>;
 		};
 
 		led@3 {
-			label = "blue:lan";
+			function = LED_FUNCTION_LAN;
+			color = <LED_COLOR_ID_BLUE>;
 			gpios = <&pio 9 GPIO_ACTIVE_LOW>;
 		};
 
@@ -95,7 +100,7 @@
 		phy-mode = "2500base-x";
 
 		nvmem-cell-names = "mac-address";
-		nvmem-cells = <&macaddr_bdinfo_de00>;
+		nvmem-cells = <&macaddr_bdinfo_de00 0>;
 
 		fixed-link {
 			speed = <2500>;
@@ -112,7 +117,7 @@
 };
 
 &mdio_bus {
-	switch: switch@0 {
+	switch: switch@1f {
 		compatible = "mediatek,mt7531";
 		reg = <31>;
 		reset-gpios = <&pio 39 GPIO_ACTIVE_HIGH>;
@@ -138,8 +143,8 @@
 		reg = <0>;
 
 		spi-max-frequency = <25000000>;
-		spi-tx-buswidth = <4>;
-		spi-rx-buswidth = <4>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
 
 		partitions {
 			compatible = "fixed-partitions";
@@ -168,6 +173,18 @@
 				label = "bdinfo";
 				reg = <0x60000 0x10000>;
 				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					macaddr_bdinfo_de00: macaddr@de00 {
+						compatible = "mac-base";
+						reg = <0xde00 0x6>;
+						#nvmem-cell-cells = <1>;
+					};
+				};
 			};
 
 			partition@70000 {
@@ -223,32 +240,22 @@
 			label = "wan";
 
 			nvmem-cell-names = "mac-address";
-			nvmem-cells = <&macaddr_bdinfo_de00>;
-			mac-address-increment = <1>;
+			nvmem-cells = <&macaddr_bdinfo_de00 1>;
 		};
 
-		lan1: port@1 {
+		port@1 {
 			reg = <1>;
 			label = "lan1";
-
-			nvmem-cell-names = "mac-address";
-			nvmem-cells = <&macaddr_bdinfo_de00>;
 		};
 
 		port@2 {
 			reg = <2>;
 			label = "lan2";
-
-			nvmem-cell-names = "mac-address";
-			nvmem-cells = <&macaddr_bdinfo_de00>;
 		};
 
 		port@3 {
 			reg = <3>;
 			label = "lan3";
-
-			nvmem-cell-names = "mac-address";
-			nvmem-cells = <&macaddr_bdinfo_de00>;
 		};
 
 		port@6 {
@@ -269,14 +276,4 @@
 &wifi {
 	status = "okay";
 	mediatek,mtd-eeprom = <&factory 0x0>;
-};
-
-&bdinfo {
-	compatible = "nvmem-cells";
-	#address-cells = <1>;
-	#size-cells = <1>;
-
-	macaddr_bdinfo_de00: macaddr@de00 {
-		reg = <0xde00 0x6>;
-	};
 };

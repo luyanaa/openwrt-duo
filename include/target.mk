@@ -264,6 +264,10 @@ ifeq ($(DUMP),1)
     CPU_TYPE ?= riscv64
     CPU_CFLAGS_riscv64:=-mabi=lp64d -march=rv64imafdc
   endif
+  ifeq ($(ARCH),riscv32)
+    CPU_TYPE ?= riscv32
+    CPU_CFLAGS_riscv32:=-mabi=ilp32 -march=rv32ima
+  endif
   ifneq ($(CPU_TYPE),)
     ifndef CPU_CFLAGS_$(CPU_TYPE)
       $(warning CPU_TYPE "$(CPU_TYPE)" doesn't correspond to a known type)

@@ -2,7 +2,7 @@
 
 choice
 	prompt "GCC compiler Version" if TOOLCHAINOPTS
-	default GCC_USE_VERSION_12
+	default GCC_USE_VERSION_13
 	help
 	  Select the version of gcc you wish to use.
 
@@ -15,6 +15,11 @@ choice
 	config GCC_USE_VERSION_13
 		bool "gcc 13.x"
 endchoice
+
+config GCC_USE_DEFAULT_VERSION
+	bool
+	default y if !TOOLCHAINOPTS || GCC_USE_VERSION_13
+	imply KERNEL_WERROR
 
 config GCC_USE_GRAPHITE
 	bool
